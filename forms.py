@@ -1,4 +1,5 @@
 from datetime import datetime
+from email.policy import default
 from flask_wtf import Form
 from wtforms import StringField, SelectField, SelectMultipleField, DateTimeField, BooleanField
 from wtforms.validators import DataRequired, AnyOf, URL
@@ -25,6 +26,7 @@ class VenueForm(Form):
     )
     state = SelectField(
         'state', validators=[DataRequired()],
+        # default="CA",
         choices=[
             ('AL', 'AL'),
             ('AK', 'AK'),
@@ -236,4 +238,3 @@ class ArtistForm(Form):
     seeking_description = StringField(
             'seeking_description'
      )
-
