@@ -75,11 +75,11 @@ class ArtistList(db.Model):
 #child
 
 class Show(db.Model):
-  __tablename__ = 'Show'
-  id = db.Column(db.Integer, primary_key=True)
-  start_time = db.Column(db.DateTime, nullable = False)
-  artist_id = db.Column(db.Integer, db.ForeignKey('Artist.id'), nullable=False)
-  venue_id = db.Column(db.Integer, db.ForeignKey('Venue.id'), nullable=False)
+    __tablename__ = 'Show'
+    id = db.Column(db.Integer, primary_key=True)
+    start_time = db.Column(db.String, nullable = False)
+    artist_id = db.Column(db.Integer, db.ForeignKey('Artist.id'), nullable=False)
+    venue_id = db.Column(db.Integer, db.ForeignKey('Venue.id'), nullable=False)
 
-  def __repr__(self):
+    def __repr__(self):
         return f'<Show {self.id} {self.start_time} {self.artist_id} {self.venue_id} >'
