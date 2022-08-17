@@ -292,16 +292,6 @@ def delete_venue(venue_id):
 @app.route('/artists')
 def artists():
   # TODO: replace with real data returned from querying the database
-  data=[{
-    "id": 4,
-    "name": "Guns N Petals",
-  }, {
-    "id": 5,
-    "name": "Matt Quevedo",
-  }, {
-    "id": 6,
-    "name": "The Wild Sax Band",
-  }]
 
   data = Artist.query.all()
   return render_template('pages/artists.html', artists=data)
@@ -326,17 +316,50 @@ def show_artist(artist_id):
   # shows the artist page with the given artist_id
   # TODO: replace with real artist data from the artist table, using artist_id
 
-  error = False
-  try:
-    data = Artist.query.get(artist_id)
-    data.genres=data.genres.split(',')
-  except Exception as e:
-    error = True
-    app.logger.info(f'error, {e}')
-  finally:
-    if error:
-      abort (400)
-    else:
+
+    artist = Artist.query.get(artist_id)
+    # venue.genres=venue.genres.split(',')
+    shows = Show.query.filter_by(artist_id=artist_id).all()
+    data = []
+    past_shows = []
+    upcoming_shows = []
+    current_time = datetime.now()
+
+    for show in shows:
+      data = {
+      'venue_id': show.venue_id,
+      'venue_name': show.venue.name,
+      'venue_image_link': show.venue.image_link,
+      'start_time': format_datetime(str(show.start_time))
+    }
+      if show.start_time > current_time:
+        upcoming_shows.append(data)
+      else:
+        past_shows.append(data)
+    data = {
+        'id': artist.id,
+        'name': artist.name,
+        'genres': artist.genres.split(','),
+        'city': artist.city,
+        'state': artist.state,
+        'phone': artist.phone,
+        'website' : artist.website,
+        'facebook_link': artist.facebook_link,
+        'seeking_venue': artist.seeking_venue,
+        'seeking_description': artist.seeking_description,
+        'image_link': artist.image_link,
+        'past_shows': past_shows,
+        'upcoming_shows': upcoming_shows,
+        'past_shows_count': len(past_shows),
+        'upcoming_shows_count': len(upcoming_shows)
+      }
+
+
+
+
+
+
+
 
 
 
@@ -413,7 +436,7 @@ def show_artist(artist_id):
   #   "upcoming_shows_count": 3,
   # }
   # data = list(filter(lambda d: d['id'] == artist_id, [data1, data2, data3]))[0]
-      return render_template('pages/show_artist.html', artist=data)
+    return render_template('pages/show_artist.html', artist=data)
 
 
 #  Update
@@ -426,8 +449,7 @@ def edit_artist(artist_id):
     city=artist.city,
     state=artist.state,
     phone=artist.phone,
-    genres=artist.genres.split(','),
-    # data.genres=data.genres.split(',')
+    genres=artist.genres.split,
     facebook_link=artist.facebook_link,
     image_link=artist.image_link,
     seeking_venue=artist.seeking_venue,
@@ -456,6 +478,21 @@ def edit_artist_submission(artist_id):
   # TODO: take values from the form submitted, and update existing
   # artist record with ID <artist_id> using the new attributes
 
+  artist = Artist.query.get(artist_id)
+  artist_form = ArtistForm(request.form)
+
+  artist.name = artist_form.name.data
+  artist.genres = ",".join(artist_form.genres.data)
+  artist.city = artist_form.city.data
+  artist.state = artist_form.state.data
+  artist.phone = artist_form.phone.data
+  artist.image_link = artist_form.image_link.data
+  artist.facebook_link = artist_form.facebook_link.data
+  artist.website_link = artist_form.website_link.data
+  artist.seeking_venue = artist_form.seeking_venue.data
+  artist.seeking_description = artist_form.seeking_description.data
+  db.session.commit()
+  db.session.close()
 
   return redirect(url_for('show_artist', artist_id=artist_id))
 
@@ -531,15 +568,13 @@ def create_artist_submission():
     name = form_data['name']
     genres = ",".join(artist.genres.data) # form_data['genres']
     city = form_data['city']
-    state = venue_form.city.data
+    state = form_data['state']
     phone = form_data['phone']
     image_link = form_data['image_link']
     facebook_link = form_data['facebook_link']
     website = form_data['website_link']
     seeking_venue = False if form_data.get("seeking_venue", None) is None else True
     seeking_description = form_data['seeking_description']
-    # past_shows = []
-    # upcoming_shows = []
 
 
     artist = Artist(name=name, genres=genres, city=city,
