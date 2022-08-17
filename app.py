@@ -16,20 +16,27 @@ from logging import Formatter, FileHandler
 from flask_wtf import Form
 from forms import *
 import sys
-from models import ArtistList, Venue, VenueList, Artist, Show
+from models import  Venue, VenueList, Artist, Show
 from app_init import app, db
 
 #----------------------------------------------------------------------------#
 # Filters.
 #----------------------------------------------------------------------------#
 
+# def format_datetime(value, format='medium'):
+#   date = dateutil.parser.parse(value)
+#   if format == 'full':
+#       format="EEEE MMMM, d, y 'at' h:mma"
+#   elif format == 'medium':
+#       format="EE MM, dd, y h:mma"
+#   return babel.dates.format_datetime(date, format, locale='en')
+
 def format_datetime(value, format='medium'):
-  date = dateutil.parser.parse(value)
-  if format == 'full':
-      format="EEEE MMMM, d, y 'at' h:mma"
-  elif format == 'medium':
-      format="EE MM, dd, y h:mma"
-  return babel.dates.format_datetime(date, format, locale='en')
+    if isinstance(value, str):
+        date = dateutil.parser.parse(value)
+    else:
+        date = value
+    return babel.dates.format_datetime(date, format, locale='en')
 
 app.jinja_env.filters['datetime'] = format_datetime
 
@@ -49,27 +56,27 @@ def index():
 def venues():
   # TODO: replace with real venues data.
   #       num_upcoming_shows should be aggregated based on number of upcoming shows per venue.
-  data=[{
-    "city": "San Francisco",
-    "state": "CA",
-    "venues": [{
-      "id": 1,
-      "name": "The Musical Hop",
-      "num_upcoming_shows": 0,
-    }, {
-      "id": 3,
-      "name": "Park Square Live Music & Coffee",
-      "num_upcoming_shows": 1,
-    }]
-  }, {
-    "city": "New York",
-    "state": "NY",
-    "venues": [{
-      "id": 2,
-      "name": "The Dueling Pianos Bar",
-      "num_upcoming_shows": 0,
-    }]
-  }]
+  # data=[{
+  #   "city": "San Francisco",
+  #   "state": "CA",
+  #   "venues": [{
+  #     "id": 1,
+  #     "name": "The Musical Hop",
+  #     "num_upcoming_shows": 0,
+  #   }, {
+  #     "id": 3,
+  #     "name": "Park Square Live Music & Coffee",
+  #     "num_upcoming_shows": 1,
+  #   }]
+  # }, {
+  #   "city": "New York",
+  #   "state": "NY",
+  #   "venues": [{
+  #     "id": 2,
+  #     "name": "The Dueling Pianos Bar",
+  #     "num_upcoming_shows": 0,
+  #   }]
+  # }]
 
   data = VenueList.query.all()
   return render_template('pages/venues.html',
@@ -97,24 +104,46 @@ def search_venues():
 def show_venue(venue_id):
   # shows the venue page with the given venue_id
   # TODO: replace with real venue data from the venues table, using venue_id
-  error = False
-  try:
-    data = Venue.query.filter_by(id=venue_id).first()
-    data.genres=data.genres.split(',')
-    app.logger.info(f'data: {data.genres}')
-    # db.session.commit()
-  except Exception as e:
-    app.logger.info(f"venues get error: {e}")
-    error = True
-    # db.session.rollback()
-  finally:
-    # db.session.close()
-    if error:
-      abort (400)
-    else:
+    venue = Venue.query.get(venue_id)
+    venue.genres=venue.genres.split(',')
+    shows = Show.query.filter_by(venue_id=venue_id).all()
+    data = []
+    past_shows = []
+    upcoming_shows = []
+    current_time = datetime.now()
 
-      app.logger.info(f"venues get data: {data}")
-      return render_template('pages/show_venue.html', venue=data)
+    for show in shows:
+      data = {
+      'artist_id': show.artist_id,
+      'artist_name': show.artist.name,
+      'artist_image_link': show.artist.image_link,
+      'start_time': format_datetime(str(show.start_time))
+    }
+      if show.start_time > current_time:
+        upcoming_shows.append(data)
+      else:
+        past_shows.append(data)
+    data = {
+        'id': venue.id,
+        'name': venue.name,
+        'genres': venue.genres,
+        'city': venue.city,
+        'state': venue.state,
+        'phone': venue.phone,
+        'website' : venue.website,
+        'facebook_link': venue.facebook_link,
+        'image_link': venue.image_link,
+        'past_shows': past_shows,
+        'upcoming_shows': upcoming_shows,
+        'past_shows_count': len(past_shows),
+        'upcoming_shows_count': len(upcoming_shows)
+      }
+
+  #     app.logger.info(f"venues get data: {data}")
+
+    return render_template('pages/show_venue.html', venue=data)
+
+  #     return render_template('pages/show_venue.html', venue=data)
 
 
   # }
@@ -204,7 +233,8 @@ def create_venue_submission():
     image_link = form_data['image_link']
     facebook_link = form_data['facebook_link']
     website = form_data['website_link']
-    seeking_talent = False
+    seeking_talent = False if form_data.get("seeking_talent", None) is None else True
+
     seeking_description = form_data['seeking_description']
     # vList_id = form_data['vList_id']
     past_shows = []
@@ -307,7 +337,7 @@ def artists():
     "name": "The Wild Sax Band",
   }]
 
-  data = ArtistList.query.all()
+  data = Artist.query.all()
   return render_template('pages/artists.html', artists=data)
 
 @app.route('/artists/search', methods=['POST'])
@@ -332,10 +362,11 @@ def show_artist(artist_id):
 
   error = False
   try:
-    data = Artist.query.filter_by(id=artist_id).first()
+    data = Artist.query.get(artist_id)
     data.genres=data.genres.split(',')
   except Exception as e:
     error = True
+    app.logger.info(f'error, {e}')
   finally:
     if error:
       abort (400)
@@ -432,7 +463,7 @@ def edit_artist(artist_id):
     genres=artist.genres.split(","),
     facebook_link=artist.facebook_link,
     image_link=artist.image_link,
-    seeking_talent=artist.seeking_talent,
+    seeking_venue=artist.seeking_venue,
     seeking_description=artist.seeking_description,
     website=artist.website
   )
@@ -559,25 +590,16 @@ def create_artist_submission():
     image_link = form_data['image_link']
     facebook_link = form_data['facebook_link']
     website = form_data['website_link']
-    seeking_talent = False
+    seeking_venue = False if form_data.get("seeking_venue", None) is None else True
     seeking_description = form_data['seeking_description']
     # past_shows = []
     # upcoming_shows = []
 
-    avail_a_list = Artist.query.filter_by(name=name).first()
-
-    if avail_a_list is None:
-      avail_a_list = ArtistList(name=name)
-      db.session.add(avail_a_list)
-      db.session.commit()
-      a_list_id = avail_a_list.id
-    else:
-      a_list_id = avail_a_list.aList_id
 
     artist = Artist(name=name, genres=genres, city=city,
     state=state, phone=phone, image_link=image_link,
-    facebook_link=facebook_link, website=website, seeking_talent=seeking_talent,
-    seeking_description=seeking_description, aList_id=a_list_id)
+    facebook_link=facebook_link, website=website, seeking_venue=seeking_venue,
+    seeking_description=seeking_description)
 
     db.session.add(artist)
     db.session.commit()
@@ -590,9 +612,8 @@ def create_artist_submission():
     body['image_link'] = artist.image_link
     body['facebook_link'] = artist.facebook_link
     body['website'] = artist.website
-    body['seeking_talent'] = artist.seeking_talent
+    body['seeking_venue'] = artist.seeking_venue
     body['seeking_description'] = artist.seeking_description
-    body['aList_id'] = artist.aList_id
 
   except Exception as e:
     app.logger.error(f"Error: {e}")
@@ -667,6 +688,8 @@ def shows():
   # })
   # for show in data:
     # show.start_time = "2035-04-15T20:00:00.000Z"
+
+  # shows = Show.query.join(Artist, Artist.id == Show.artist_id).join(Venue, Venue.id == Show.venue_id).all()
 
   shows = Show.query.all()
   data = []

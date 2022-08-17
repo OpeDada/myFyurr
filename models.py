@@ -1,4 +1,5 @@
 from app_init import db
+from datetime import datetime
 
 #----------------------------------------------------------------------------#
 # Models.
@@ -22,7 +23,7 @@ class Venue(db.Model):
     # past_shows =
     # upcoming_shows =
     vList_id = db.Column(db.Integer, db.ForeignKey('venuelists.id'), nullable=False)
-    shows = db.relationship('Show', backref='vShow', lazy=True)
+    shows = db.relationship('Show', backref='venue', lazy=True)
 
     # TODO: implement any missing fields, as a database migration using Flask-Migrate
     def __repr__(self):
@@ -51,24 +52,14 @@ class Artist(db.Model):
     image_link = db.Column(db.String(500))
     facebook_link = db.Column(db.String(120))
     website = db.Column(db.String())
-    seeking_talent = db.Column(db.Boolean, nullable=False)
+    seeking_venue = db.Column(db.Boolean, nullable=False)
     seeking_description = db.Column(db.String())
-    aList_id = db.Column(db.Integer, db.ForeignKey('artistlists.id'), nullable=False)
-    shows = db.relationship('Show', backref='aShow', lazy=True)
+    shows = db.relationship('Show', backref='artist', lazy=True)
 
     # TODO: implement any missing fields, as a database migration using Flask-Migrate
 
     def __repr__(self):
-      return f'<Artist {self.id} {self.name} {self.genres} {self.city} {self.state} {self.phone} {self.image_link} {self.facebook_link} {self.website} {self.seeking_talent} {self.seeking_description} {self.aList_id}>'
-
-class ArtistList(db.Model):
-    __tablename__ = 'artistlists'
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(), nullable=False)
-    artists = db.relationship('Artist', backref='aList', lazy=True)
-
-    def __repr__(self):
-        return f'<ArtistList {self.id} {self.name} >'
+      return f'<Artist {self.id} {self.name} {self.genres} {self.city} {self.state} {self.phone} {self.image_link} {self.facebook_link} {self.website} {self.seeking_talent} {self.seeking_description}>'
 
 # TODO Implement Show and Artist models, and complete all model relationships and properties, as a database migration.
 
@@ -77,9 +68,9 @@ class ArtistList(db.Model):
 class Show(db.Model):
     __tablename__ = 'Show'
     id = db.Column(db.Integer, primary_key=True)
-    start_time = db.Column(db.String, nullable = False)
-    artist_id = db.Column(db.Integer, db.ForeignKey('Artist.id'), nullable=False)
-    venue_id = db.Column(db.Integer, db.ForeignKey('Venue.id'), nullable=False)
+    start_time = db.Column(db.DateTime, default=datetime.utcnow(), nullable = False)
+    artist_id = db.Column(db.Integer, db.ForeignKey('Artist.id', onupdate='CASCADE', ondelete='CASCADE'), nullable=False)
+    venue_id = db.Column(db.Integer, db.ForeignKey('Venue.id', onupdate='CASCADE', ondelete='CASCADE'), nullable=False)
 
     def __repr__(self):
         return f'<Show {self.id} {self.start_time} {self.artist_id} {self.venue_id} >'
