@@ -139,11 +139,7 @@ def show_venue(venue_id):
         'upcoming_shows_count': len(upcoming_shows)
       }
 
-  #     app.logger.info(f"venues get data: {data}")
-
     return render_template('pages/show_venue.html', venue=data)
-
-  #     return render_template('pages/show_venue.html', venue=data)
 
 
   # }
@@ -234,11 +230,7 @@ def create_venue_submission():
     facebook_link = form_data['facebook_link']
     website = form_data['website_link']
     seeking_talent = False if form_data.get("seeking_talent", None) is None else True
-
     seeking_description = form_data['seeking_description']
-    # vList_id = form_data['vList_id']
-    past_shows = []
-    upcoming_shows = []
 
     avail_v_list = Venue.query.filter_by(city=city, state=state).first()
     app.logger.info(f'avail_v_list: ,{avail_v_list}')
