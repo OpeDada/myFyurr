@@ -23,14 +23,6 @@ from app_init import app, db
 # Filters.
 #----------------------------------------------------------------------------#
 
-# def format_datetime(value, format='medium'):
-#   date = dateutil.parser.parse(value)
-#   if format == 'full':
-#       format="EEEE MMMM, d, y 'at' h:mma"
-#   elif format == 'medium':
-#       format="EE MM, dd, y h:mma"
-#   return babel.dates.format_datetime(date, format, locale='en')
-
 def format_datetime(value, format='medium'):
     if isinstance(value, str):
         date = dateutil.parser.parse(value)
@@ -56,33 +48,11 @@ def index():
 def venues():
   # TODO: replace with real venues data.
   #       num_upcoming_shows should be aggregated based on number of upcoming shows per venue.
-  # data=[{
-  #   "city": "San Francisco",
-  #   "state": "CA",
-  #   "venues": [{
-  #     "id": 1,
-  #     "name": "The Musical Hop",
-  #     "num_upcoming_shows": 0,
-  #   }, {
-  #     "id": 3,
-  #     "name": "Park Square Live Music & Coffee",
-  #     "num_upcoming_shows": 1,
-  #   }]
-  # }, {
-  #   "city": "New York",
-  #   "state": "NY",
-  #   "venues": [{
-  #     "id": 2,
-  #     "name": "The Dueling Pianos Bar",
-  #     "num_upcoming_shows": 0,
-  #   }]
-  # }]
 
   data = VenueList.query.all()
   return render_template('pages/venues.html',
   areas= data
-  # vLists=VenueList.query.all(),
-  # venues = Venue.query.order_by('city', 'state').all()
+
   )
 
 @app.route('/venues/search', methods=['POST'])
@@ -105,7 +75,7 @@ def show_venue(venue_id):
   # shows the venue page with the given venue_id
   # TODO: replace with real venue data from the venues table, using venue_id
     venue = Venue.query.get(venue_id)
-    venue.genres=venue.genres.split(',')
+    # venue.genres=venue.genres.split(',')
     shows = Show.query.filter_by(venue_id=venue_id).all()
     data = []
     past_shows = []
@@ -126,12 +96,13 @@ def show_venue(venue_id):
     data = {
         'id': venue.id,
         'name': venue.name,
-        'genres': venue.genres,
+        'genres': venue.genres.split(','),
         'city': venue.city,
         'state': venue.state,
         'phone': venue.phone,
         'website' : venue.website,
         'facebook_link': venue.facebook_link,
+        'seeking_talent': venue.seeking_talent,
         'image_link': venue.image_link,
         'past_shows': past_shows,
         'upcoming_shows': upcoming_shows,
@@ -247,6 +218,9 @@ def create_venue_submission():
     state=state, address=address, phone=phone, image_link=image_link,
     facebook_link=facebook_link, website=website, seeking_talent=seeking_talent,
     seeking_description=seeking_description, vList_id=v_list_id)
+
+    app.logger.info(f'venue: ,{venue}')
+
 
     db.session.add(venue)
     db.session.commit()
@@ -452,7 +426,8 @@ def edit_artist(artist_id):
     city=artist.city,
     state=artist.state,
     phone=artist.phone,
-    genres=artist.genres.split(","),
+    genres=artist.genres.split(','),
+    # data.genres=data.genres.split(',')
     facebook_link=artist.facebook_link,
     image_link=artist.image_link,
     seeking_venue=artist.seeking_venue,
@@ -488,32 +463,13 @@ def edit_artist_submission(artist_id):
 def edit_venue(venue_id):
   venue = Venue.query.get(venue_id)
 
-
-  # body['genres'] = venue.genres.split(',')
-
-
-  # venue={
-  #   "id": 1,
-  #   "name": "The Musical Hop",
-  #   "genres": ["Jazz", "Reggae", "Swing", "Classical", "Folk"],
-  #   "address": "1015 Folsom Street",
-  #   "city": "San Francisco",
-  #   "state": "CA",
-  #   "phone": "123-123-1234",
-  #   "website": "https://www.themusicalhop.com",
-  #   "facebook_link": "https://www.facebook.com/TheMusicalHop",
-  #   "seeking_talent": True,
-  #   "seeking_description": "We are on the lookout for a local artist to play every two weeks. Please call us.",
-  #   "image_link": "https://images.unsplash.com/photo-1543900694-133f37abaaa5?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=400&q=60",
-  #   "website_link": "https://images.unsplash.com/photo-1543900694-133f37abaaa5?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=400&q=60"
-  # }
   form = VenueForm(
     name=venue.name,
     city=venue.city,
     state=venue.state,
     address=venue.address,
     phone=venue.phone,
-    genres=venue.genres.split(","),
+    genres=venue.genres,
     facebook_link=venue.facebook_link,
     image_link=venue.image_link,
     seeking_talent=venue.seeking_talent,
@@ -528,22 +484,20 @@ def edit_venue_submission(venue_id):
   # TODO: take values from the form submitted, and update existing
   # venue record with ID <venue_id> using the new attributes
 
-  app.logger.info(f"request.form.name.data: {request.form['name']}")
   venue = Venue.query.get(venue_id)
-  venue.name = request.form['name']
-  venue.city = request.form['city']
-  venue.state = request.form['state']
-  venue.address = request.form['address']
-  venue.phone = request.form['phone']
-  venue.genres = request.form['genres']
-  venue.facebook_link = request.form['facebook_link']
-  venue.image_link = request.form['image_link']
-  # app.logger.info(f"request.form['seeking_talent'], {request.form['seeking_talent']}")
-  venue.seeking_talent = False if request.form.get("seeking_talent", None) is None else True
-  # venue.seeking_talent = request.form['seeking_talent']
-  venue.seeking_description = request.form['seeking_description']
-  venue.website_link = request.form['website_link']
+  venue_form = VenueForm(request.form)
 
+  venue.name = venue_form.name.data
+  venue.genres = ",".join(venue_form.genres.data)
+  venue.city = venue_form.city.data
+  venue.state = venue_form.state.data
+  venue.address = venue_form.address.data
+  venue.phone = venue_form.phone.data
+  venue.image_link = venue_form.image_link.data
+  venue.facebook_link = venue_form.facebook_link.data
+  venue.website_link = venue_form.website_link.data
+  venue.seeking_talent = venue_form.seeking_talent.data
+  venue.seeking_description = venue_form.seeking_description.data
   db.session.commit()
   db.session.close()
   return redirect(url_for('show_venue', venue_id=venue_id))
@@ -577,7 +531,7 @@ def create_artist_submission():
     name = form_data['name']
     genres = ",".join(artist.genres.data) # form_data['genres']
     city = form_data['city']
-    state = form_data['state']
+    state = venue_form.city.data
     phone = form_data['phone']
     image_link = form_data['image_link']
     facebook_link = form_data['facebook_link']
