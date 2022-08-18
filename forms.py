@@ -2,7 +2,7 @@ from datetime import datetime
 from email.policy import default
 from flask_wtf import FlaskForm
 from wtforms import StringField, SelectField, SelectMultipleField, DateTimeField, BooleanField, SubmitField
-from wtforms.validators import DataRequired, AnyOf, URL
+from wtforms.validators import DataRequired, AnyOf, URL, Regexp
 from app_init import app
 
 
@@ -18,12 +18,6 @@ class ShowForm(FlaskForm):
         validators=[DataRequired()],
         default= datetime.today()
     )
-
-# def validate(self, extra_validators=None):
-#   rv = Form.validate(self)
-#   if not rv:
-#     return False
-#   return True
 
 class VenueForm(FlaskForm):
     name = StringField(
@@ -135,12 +129,6 @@ class VenueForm(FlaskForm):
         'seeking_description'
     )
 
-# def validate(self, extra_validators=None):
-#   rv = Form.validate(self)
-#   if not rv:
-#     return False
-#   return True
-
 class ArtistForm(FlaskForm):
     name = StringField(
         'name', validators=[DataRequired()]
@@ -206,7 +194,7 @@ class ArtistForm(FlaskForm):
     )
     phone = StringField(
         # TODO implement validation logic for state
-        'phone'
+        'phone', validators=[DataRequired(), Regexp(r'^[0-9\-\+]+$', message='phone format not accepted')]
     )
     image_link = StringField(
         'image_link'
@@ -250,9 +238,3 @@ class ArtistForm(FlaskForm):
             'seeking_description'
      )
     submit = SubmitField(label=('Submit'))
-
-# def validate(self, extra_validators=None):
-#   rv = Form.validate(self)
-#   if not rv:
-#     return False
-#   return True
