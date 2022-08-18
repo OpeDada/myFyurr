@@ -86,7 +86,7 @@ class VenueForm(FlaskForm):
         'address', validators=[DataRequired()]
     )
     phone = StringField(
-        'phone'
+        'phone', validators=[DataRequired(), Regexp(r'^[0-9\-\+]+$', message='phone format is invalid')]
     )
     image_link = StringField(
         'image_link'
@@ -194,7 +194,7 @@ class ArtistForm(FlaskForm):
     )
     phone = StringField(
         # TODO implement validation logic for state
-        'phone', validators=[DataRequired(), Regexp(r'^[0-9\-\+]+$', message='phone format not accepted')]
+        'phone', validators=[DataRequired(), Regexp(r'^[0-9\-\+]+$', message='phone format is invalid')]
     )
     image_link = StringField(
         'image_link'
