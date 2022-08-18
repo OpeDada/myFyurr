@@ -101,6 +101,7 @@ def show_venue(venue_id):
         'id': venue.id,
         'name': venue.name,
         'genres': venue.genres.split(','),
+        'address': venue.address,
         'city': venue.city,
         'state': venue.state,
         'phone': venue.phone,
@@ -116,47 +117,6 @@ def show_venue(venue_id):
 
     return render_template('pages/show_venue.html', venue=data)
 
-
-  # }
-  # data3={
-  #   "id": 3,
-    # "name": "Park Square Live Music & Coffee",
-    # "genres": ["Rock n Roll", "Jazz", "Classical", "Folk"],
-    # "address": "34 Whiskey Moore Ave",
-    # "city": "San Francisco",
-    # "state": "CA",
-    # "phone": "415-000-1234",
-    # "website": "https://www.parksquarelivemusicandcoffee.com",
-    # "facebook_link": "https://www.facebook.com/ParkSquareLiveMusicAndCoffee",
-    # "seeking_talent": False,
-    # "image_link": "https://images.unsplash.com/photo-1485686531765-ba63b07845a7?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=747&q=80",
-    # "past_shows": [{
-    #   "artist_id": 5,
-    #   "artist_name": "Matt Quevedo",
-    #   "artist_image_link": "https://images.unsplash.com/photo-1495223153807-b916f75de8c5?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=334&q=80",
-    #   "start_time": "2019-06-15T23:00:00.000Z"
-    # }],
-    # "upcoming_shows": [{
-    #   "artist_id": 6,
-    #   "artist_name": "The Wild Sax Band",
-    #   "artist_image_link": "https://images.unsplash.com/photo-1558369981-f9ca78462e61?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=794&q=80",
-  #     "start_time": "2035-04-01T20:00:00.000Z"
-  #   }, {
-  #     "artist_id": 6,
-  #     "artist_name": "The Wild Sax Band",
-  #     "artist_image_link": "https://images.unsplash.com/photo-1558369981-f9ca78462e61?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=794&q=80",
-  #     "start_time": "2035-04-08T20:00:00.000Z"
-  #   }, {
-  #     "artist_id": 6,
-  #     "artist_name": "The Wild Sax Band",
-  #     "artist_image_link": "https://images.unsplash.com/photo-1558369981-f9ca78462e61?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=794&q=80",
-  #     "start_time": "2035-04-15T20:00:00.000Z"
-  #   }],
-  #   "past_shows_count": 1,
-  #   "upcoming_shows_count": 1,
-  # }
-  # data = list(filter(lambda d: d['id'] == venue_id, [data1, data2, data3]))[0]
-
 #  Create Venue
 #  ----------------------------------------------------------------
 
@@ -169,12 +129,6 @@ def create_venue_form():
 def create_venue_submission():
   # TODO: insert form data as a new Venue record in the db, instead
   # TODO: modify data to be the data object returned from db insertion
-  # form_data = dict(request.form)
-  app.logger.info(f'form data; {list(request.form.items())}')
-  # app.logger.info(f'form data; {form_data.pop("genres")}')
-  # app.logger.info(f'form data; {request.form.pop("genres")}')
-  # app.logger.info(f'form data; {request.form.pop("genres")}')
-  # on successful db insert, flash success
   # flash('Venue ' + request.form['name'] + ' was successfully listed!')
   # TODO: on unsuccessful db insert, flash an error instead.
   # e.g., flash('An error occurred. Venue ' + data.name + ' could not be listed.')
@@ -190,65 +144,60 @@ def create_venue_submission():
 
   error = False
   body = {}
-  try:
-    form_data = dict(request.form)
-    name = form_data['name']
-    genres = ",".join(venue.genres.data) # form_data['genres']
+  if venue.validate():
+    try:
+      form_data = dict(request.form)
+      name = form_data['name']
+      genres = ",".join(venue.genres.data) # form_data['genres']
 
-    app.logger.info(f"Create genre: {genres}")
+      city = form_data['city']
+      state = form_data['state']
+      address = form_data['address']
+      phone = form_data['phone']
+      image_link = form_data['image_link']
+      facebook_link = form_data['facebook_link']
+      website = form_data['website_link']
+      seeking_talent = False if form_data.get("seeking_talent", None) is None else True
+      seeking_description = form_data['seeking_description']
 
-    city = form_data['city']
-    state = form_data['state']
-    address = form_data['address']
-    phone = form_data['phone']
-    image_link = form_data['image_link']
-    facebook_link = form_data['facebook_link']
-    website = form_data['website_link']
-    seeking_talent = False if form_data.get("seeking_talent", None) is None else True
-    seeking_description = form_data['seeking_description']
+      avail_v_list = Venue.query.filter_by(city=city, state=state).first()
 
-    avail_v_list = Venue.query.filter_by(city=city, state=state).first()
-    app.logger.info(f'avail_v_list: ,{avail_v_list}')
+      if avail_v_list is None:
+        avail_v_list = VenueList(city=city, state=state)
+        db.session.add(avail_v_list)
+        db.session.commit()
+        v_list_id = avail_v_list.id
+      else:
+        v_list_id = avail_v_list.vList_id
 
-    if avail_v_list is None:
-      avail_v_list = VenueList(city=city, state=state)
-      db.session.add(avail_v_list)
+      venue = Venue(name=name, genres=genres, city=city,
+      state=state, address=address, phone=phone, image_link=image_link,
+      facebook_link=facebook_link, website=website, seeking_talent=seeking_talent,
+      seeking_description=seeking_description, vList_id=v_list_id)
+
+      db.session.add(venue)
       db.session.commit()
-      v_list_id = avail_v_list.id
-    else:
-      v_list_id = avail_v_list.vList_id
 
-    venue = Venue(name=name, genres=genres, city=city,
-    state=state, address=address, phone=phone, image_link=image_link,
-    facebook_link=facebook_link, website=website, seeking_talent=seeking_talent,
-    seeking_description=seeking_description, vList_id=v_list_id)
+      body['name'] = venue.name
+      body['genres'] = venue.genres
+      body['city'] = venue.city
+      body['state'] = venue.state
+      body['address'] = venue.address
+      body['phone'] = venue.phone
+      body['image_link'] = venue.image_link
+      body['facebook_link'] = venue.facebook_link
+      body['website'] = venue.website
+      body['seeking_talent'] = venue.seeking_talent
+      body['seeking_description'] = venue.seeking_description
+      body['vList_id'] = venue.vList_id
 
-    app.logger.info(f'venue: ,{venue}')
-
-
-    db.session.add(venue)
-    db.session.commit()
-
-    body['name'] = venue.name
-    body['genres'] = venue.genres
-    body['city'] = venue.city
-    body['state'] = venue.state
-    body['address'] = venue.address
-    body['phone'] = venue.phone
-    body['image_link'] = venue.image_link
-    body['facebook_link'] = venue.facebook_link
-    body['website'] = venue.website
-    body['seeking_talent'] = venue.seeking_talent
-    body['seeking_description'] = venue.seeking_description
-    body['vList_id'] = venue.vList_id
-
-  except Exception as e:
-    app.logger.error(f"Error: {e}")
-    error = True
-    db.session.rollback()
-    print(sys.exc_info())
-  finally:
-    db.session.close()
+    except Exception as e:
+      app.logger.error(f"Error: {e}")
+      error = True
+      db.session.rollback()
+      print(sys.exc_info())
+    finally:
+      db.session.close()
     if error:
       flash('Venue ' + request.form['name'] + ' was not successfully listed!')
       abort (400)
@@ -256,12 +205,11 @@ def create_venue_submission():
       flash('Venue ' + request.form['name'] + ' was successfully listed!')
       return render_template('pages/home.html')
 
-  # return render_template('pages/home.html')
-
 @app.route('/venues/<venue_id>/delete', methods=['DELETE', 'GET'])
 def delete_venue(venue_id):
   # TODO: Complete this endpoint for taking a venue_id, and using
   # SQLAlchemy ORM to delete a record. Handle cases where the session commit could fail.
+  error = False
   try:
     curr_venue = Venue.query.filter_by(id=venue_id)
     v_list_len = len(Venue.query.filter_by(vList_id=curr_venue.first().vList_id).all())
@@ -274,17 +222,18 @@ def delete_venue(venue_id):
       v_list.delete()
     db.session.commit()
   except Exception as e :
+    error = True
     db.session.rollback()
-    app.logger.info(f"error: {e}")
-
   finally:
     db.session.close()
+    # if error:
+    #   return jsonify({'status': 'Venue could not be deleted'})
+
   # return jsonify({ 'success': True })
   data = VenueList.query.all()
   return render_template('pages/venues.html',
   areas= data
-  # vLists=VenueList.query.all(),
-  # venues = Venue.query.order_by('city', 'state').all()
+
   )
   # return render_template('pages/home.html')
   # BONUS CHALLENGE: Implement a button to delete a Venue on a Venue Page, have it so that
@@ -361,15 +310,6 @@ def show_artist(artist_id):
         'past_shows_count': len(past_shows),
         'upcoming_shows_count': len(upcoming_shows)
       }
-
-
-
-
-
-
-
-
-
 
 
   # data1={
@@ -488,19 +428,24 @@ def edit_artist_submission(artist_id):
 
   artist = Artist.query.get(artist_id)
   artist_form = ArtistForm(request.form)
-
-  artist.name = artist_form.name.data
-  artist.genres = ",".join(artist_form.genres.data)
-  artist.city = artist_form.city.data
-  artist.state = artist_form.state.data
-  artist.phone = artist_form.phone.data
-  artist.image_link = artist_form.image_link.data
-  artist.facebook_link = artist_form.facebook_link.data
-  artist.website_link = artist_form.website_link.data
-  artist.seeking_venue = artist_form.seeking_venue.data
-  artist.seeking_description = artist_form.seeking_description.data
-  db.session.commit()
-  db.session.close()
+  if artist_form.validate():
+    try:
+      artist.name = artist_form.name.data
+      artist.genres = ",".join(artist_form.genres.data)
+      artist.city = artist_form.city.data
+      artist.state = artist_form.state.data
+      artist.phone = artist_form.phone.data
+      artist.image_link = artist_form.image_link.data
+      artist.facebook_link = artist_form.facebook_link.data
+      artist.website_link = artist_form.website_link.data
+      artist.seeking_venue = artist_form.seeking_venue.data
+      artist.seeking_description = artist_form.seeking_description.data
+      db.session.commit()
+      db.session.close()
+    except:
+      db.session.rollback()
+    finally:
+      db.session.close()
 
   return redirect(url_for('show_artist', artist_id=artist_id))
 
@@ -531,20 +476,25 @@ def edit_venue_submission(venue_id):
 
   venue = Venue.query.get(venue_id)
   venue_form = VenueForm(request.form)
-
-  venue.name = venue_form.name.data
-  venue.genres = ",".join(venue_form.genres.data)
-  venue.city = venue_form.city.data
-  venue.state = venue_form.state.data
-  venue.address = venue_form.address.data
-  venue.phone = venue_form.phone.data
-  venue.image_link = venue_form.image_link.data
-  venue.facebook_link = venue_form.facebook_link.data
-  venue.website_link = venue_form.website_link.data
-  venue.seeking_talent = venue_form.seeking_talent.data
-  venue.seeking_description = venue_form.seeking_description.data
-  db.session.commit()
-  db.session.close()
+  if venue_form.validate():
+    try:
+      venue.name = venue_form.name.data
+      venue.genres = ",".join(venue_form.genres.data)
+      venue.city = venue_form.city.data
+      venue.state = venue_form.state.data
+      venue.address = venue_form.address.data
+      venue.phone = venue_form.phone.data
+      venue.image_link = venue_form.image_link.data
+      venue.facebook_link = venue_form.facebook_link.data
+      venue.website_link = venue_form.website_link.data
+      venue.seeking_talent = venue_form.seeking_talent.data
+      venue.seeking_description = venue_form.seeking_description.data
+      db.session.commit()
+      db.session.close()
+    except:
+      db.session.rollback()
+    finally:
+      db.session.close()
   return redirect(url_for('show_venue', venue_id=venue_id))
 
 
